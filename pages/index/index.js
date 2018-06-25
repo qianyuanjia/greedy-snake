@@ -27,14 +27,18 @@ let bodycolor='#00f'
 let windowWidth=0
 let windowHeight=0
 let start=true
+let id=0
 let requestAnimationFrame = (function () {
   return requestAnimationFrame ||
     function (callback) {
       setTimeout(callback, 1000 / 60);
     };
 })();
-Page({
- 
+let cancelAnimationFrame = (function () {
+  return cancelAnimationFrame || clearTimeout
+})();
+
+Page({ 
   onReady:function(){
     wx.showModal({
       title: '提示',
@@ -54,14 +58,7 @@ Page({
                   color: `rgba(${this.getRand(0, 255)},${this.getRand(0, 255)},${this.getRand(0, 255)},${Math.random()})`
                 })
               }
-              //初始化
-              this.drawStuff(snake)
-              this.drawStuff(food)
-              ctx.draw()
-              //贪吃蛇移动
-              if (start) {
-                this.snakeMove()
-              }
+              this.initGame()
             }
           })
         }else{
@@ -75,6 +72,16 @@ Page({
     
     
     
+  },
+  initGame:function(){
+    //初始化
+    this.drawStuff(snake)
+    this.drawStuff(food)
+    ctx.draw()
+    //贪吃蛇移动
+    if (start) {
+      this.snakeMove()
+    }
   },
   getRand:function(min,max){
     return parseInt(Math.random()*(max-min))+min
@@ -94,21 +101,7 @@ Page({
     }
   },
   restart:function(){
-    snake = [
-      {
-        coordsX: 140,
-        coordsY: 200,
-        color: '#000',
-        width: 12,
-        height: 12
-      }
-    ]
-    direction = 'right'
-    start = true
-    food = []
-    wx.navigateTo({
-      url: '../index/index',
-    })
+    this.failInit()
   },
   //失败处理
   failFn:function(content){
@@ -116,29 +109,35 @@ Page({
     wx.showModal({
       title: 'Fuck',
       content: content,
-      success: function (res) {
-        if (res.confirm) {
-          snake = [
-            {
-              coordsX: 140,
-              coordsY: 200,
-              color: '#000',
-              width: 12,
-              height: 12
-            }
-          ]
-          direction = 'right'
-          start = true
-          food=[]
-          wx.navigateTo({
-            url: '../index/index',
-          })
+      success: (res)=> {
+        if (res.confirm) {       
+          this.failInit()
         } else if (res.cancel) {
           wx.showToast({
             title: '点击右上角可退出游戏，长按可重新开始',
             icon: 'none'
           })
         }
+      }
+    })
+  },
+  //失败初始化
+  failInit:function(){
+    wx.navigateTo({
+      url: '../index/index',
+      success: () => {
+        snake = [
+          {
+            coordsX: 140,
+            coordsY: 200,
+            color: '#000',
+            width: 12,
+            height: 12
+          }
+        ]
+        direction = 'right'
+        food = []
+        start = true
       }
     })
   },
@@ -175,9 +174,8 @@ Page({
     }
   },
   snakeMove:function(){
-    frameNum++
-    let _this = this
     if (frameNum % 20 == 0 && start) {
+      let _this = this
       snake.push({
         coordsX: snake[0].coordsX,
         coordsY: snake[0].coordsY,
@@ -192,14 +190,14 @@ Page({
       this.changeHeadCoords()
       this.drawStuff(snake)
       this.drawStuff(food)
-      ctx.draw()
-
+      ctx.draw()   
       this.detectTouch(_this)
     }
     if(start){
-      requestAnimationFrame(this.snakeMove)
+      cancelAnimationFrame(id)
+      frameNum++
+      id=requestAnimationFrame(this.snakeMove)
     }
-   
   },
   
   changeHeadCoords:function(){
@@ -242,6 +240,5 @@ Page({
         direction = 'bottom'
       }
     }
-    console.log(direction)
   }
 })
